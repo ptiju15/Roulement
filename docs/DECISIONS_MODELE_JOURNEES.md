@@ -16,7 +16,34 @@ Une journée possède notamment :
 - son éventuel rattachement à un RHR ;
 - les informations nécessaires au contrôle de sa compatibilité avec les autres cases.
 
-## 2. Menu de chaque case de la grille
+### Règle de positionnement des journées
+
+Le dernier chiffre du code détermine le jour de positionnement :
+- `1` → lundi ;
+- `2` → mardi ;
+- `3` → mercredi ;
+- `4` → jeudi ;
+- `5` → vendredi ;
+- `6` → samedi ;
+- `7` → dimanche.
+
+Une journée terminant par `0` est une journée type pouvant circuler tous les jours, sauf lorsqu'une variante existe pour le jour concerné.
+
+Exemple : `K111` est une journée du **lundi uniquement**. Elle ne peut donc être positionnée que dans une colonne lundi.
+
+## 2. Une journée ne peut être utilisée qu'une fois par jour de la grille
+
+Une grille de 28 ou 30 lignes représente les conducteurs d'une même semaine : une ligne correspond à un conducteur.
+
+Par conséquent, une même journée ne peut pas être attribuée à plusieurs conducteurs le même jour.
+
+Exemple : si `K111` est placée le lundi de la ligne 1, `K111` ne peut être placée sur aucun autre lundi de la grille.
+
+La semaine suivante, les conducteurs descendent d'une ligne selon la rotation du roulement et suivent les journées correspondantes. La grille représente donc une photographie d'une semaine du roulement complet, et non 28 ou 30 semaines indépendantes.
+
+Cette contrainte doit être contrôlée lors de la sélection d'une journée.
+
+## 3. Menu de chaque case de la grille
 
 Chaque case doit permettre de sélectionner l'un des types suivants :
 
@@ -28,13 +55,14 @@ Chaque case doit permettre de sélectionner l'un des types suivants :
 
 Les anciennes valeurs `AF`, `S` et `C` ne font pas partie des choix du menu.
 
-## 3. Contrôle à la sélection
+## 4. Contrôle à la sélection
 
 Toute sélection déclenche un contrôle immédiat de compatibilité avec le contexte de la grille.
 
 Le contrôle tient notamment compte :
 - de la journée sélectionnée et de ses horaires ;
 - du jour concerné ;
+- de la disponibilité de la journée dans cette colonne pour les autres lignes ;
 - des cases voisines ;
 - des contraintes de positionnement des journées ;
 - des RP constitués par l'enchaînement des cases.
@@ -43,7 +71,7 @@ Le contrôle tient notamment compte :
 
 Si une journée K placée un vendredi se termine après 19 h, le choix `Repos` le samedi doit être signalé comme incompatible avec l'enchaînement correspondant.
 
-## 4. Une anomalie ne bloque pas la sélection
+## 5. Une anomalie ne bloque pas la sélection
 
 Le logiciel **n'interdit pas** une sélection incompatible.
 
@@ -54,7 +82,7 @@ Il doit :
 
 Objectif : permettre de reconstruire fidèlement une grille existante, même si celle-ci comporte des anomalies, puis permettre de les identifier et de les corriger.
 
-## 5. Contrôle immédiat et contrôle global
+## 6. Contrôle immédiat et contrôle global
 
 Deux niveaux sont prévus :
 
@@ -66,13 +94,13 @@ Déclenché lors de chaque modification d'une case. Il signale les incompatibili
 
 Analyse l'ensemble de la grille et produit la liste des anomalies réglementaires et structurelles.
 
-## 6. RHR
+## 7. RHR
 
 Deux journées reliées par un RHR constituent un bloc indissociable.
 
 La relation entre les deux journées doit être conservée dans le modèle afin que le déplacement ou la modification de l'une entraîne le traitement approprié de l'autre.
 
-## 7. Principe d'implémentation
+## 8. Principe d'implémentation
 
 La grille contient des références vers la bibliothèque des journées ou des valeurs de type RP/FAC/RM/DISPO.
 
