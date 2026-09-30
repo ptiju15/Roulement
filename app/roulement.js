@@ -22,10 +22,43 @@ function parseValue(v){
   return {type:v||''};
 }
 function dayByCode(code){return JOURNEES.find(x=>x.code===code)||null;}
-function selectOptions(v){
+
+function dayNumberFromCode(code){
+  const last=code.slice(-1);
+  if(!/^[0-7]$/.test(last)) return null;
+  return Number(last);
+}
+
+function hasVariantForDay(day, col){
+  const number=col+1;
+  return JOURNEES.some(j=>j.code!==day.code && j.residence===day.residence && dayNumberFromCode(j.code)===number);
+}
+
+function isDayAvailable(day, rowIndex, colIndex){
+  if(!day.allowedDays.includes(colIndex)) return false;
+
+  // A type-0 day is unavailable on a day for which a same-residence variant exists.
+  if(dayNumberFromCode(day.code)===0 && hasVariantForDay(day,colIndex)) return false;
+
+  // A specific day can only be used once in a given day/column of the weekly grid.
+  for(let row=0;row<A.length;row++){
+    if(row===rowIndex) continue;
+    const cell=A[row][colIndex];
+    if(cell && cell.type==='JOURNEE' && cell.code===day.code) return false;
+  }
+  return true;
+}
+
+function selectOptions(v,rowIndex,colIndex){
   let s='<option value="">—</option>';
   s+='<optgroup label="Journées">';
-  JOURNEES.forEach(j=>{let x='J:'+j.code;s+='<option value="'+x+'" '+(optionValue(v)===x?'selected':'')+'>'+j.code+'</option>';});
+  JOURNEES.forEach(j=>{
+    let x='J:'+j.code;
+    const selected=optionValue(v)===x;
+    const available=isDayAvailable(j,rowIndex,colIndex);
+    const disabled=!available && !selected;
+    s+='<option value="'+x+'" '+(selected?'selected ':'')+(disabled?'disabled ':'')+'>'+j.code+'</option>';
+  });
   s+='</optgroup><optgroup label="Repos et autres">';
   [['RP','Repos'],['FAC','FAC'],['RM','RM'],['DISPO','DISPO']].forEach(([x,l])=>s+='<option value="'+x+'" '+(v&&v.type===x?'selected':'')+'>'+l+'</option>');
   s+='</optgroup>';return s;
@@ -37,7 +70,7 @@ function draw(){
     s+='<tr><td class=week>'+(i+1)+'</td>';
     row.forEach((v,j)=>{
       let cls=(j>4?'weekend ':'')+(v&&v.type==='RP'?'rp ':'')+(v&&v.type==='FAC'?'fac ':'')+(v&&v.type==='RM'?'rm ':'')+(v&&v.type==='DISPO'?'dispo ':'');
-      s+='<td id=c'+i+'_'+j+' class="'+cls+'"><select onchange="setCell('+i+','+j+',this.value)">'+selectOptions(v)+'</select></td>';
+      s+='<td id=c'+i+'_'+j+' class="'+cls+'"><select onchange="setCell('+i+','+j+',this.value)">'+selectOptions(v,i,j)+'</select></td>';
     });s+='</tr>';
   });
   t.innerHTML=s;calc();
