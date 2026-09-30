@@ -2,28 +2,128 @@ const D=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const DAY_TYPES=['JOURNEE','RP','FAC','RM','DISPO'];
 const DEFAULT_DAYS=[['K110',[0,1,2,3,4,5,6]],['K111',[0]],['K112',[1]],['K113',[2]],['K114',[3]],['K115',[4]],['K116',[5]],['K117',[6]]];
 let JOURNEES=RoulementModel.list();
-function ensureDefaultDays(){DEFAULT_DAYS.forEach(([code,allowedDays])=>{if(!RoulementModel.get(code))RoulementModel.add({code,residence:'K',allowedDays});});JOURNEES=RoulementModel.list();}
+let RHRS=RoulementModel.listRhr();
+function ensureDefaultDays(){DEFAULT_DAYS.forEach(([code,allowedDays])=>{if(!RoulementModel.get(code))RoulementModel.add({code,allowedDays});});JOURNEES=RoulementModel.list();RHRS=RoulementModel.listRhr();}
 ensureDefaultDays();
 let A=Array.from({length:28},()=>Array(7).fill(null));
-function refreshJournees(){ensureDefaultDays();}
+function refreshJournees(){ensureDefaultDays();JOURNEES=RoulementModel.list();RHRS=RoulementModel.listRhr();}
 function optionValue(v){if(!v)return '';if(v.type==='JOURNEE')return 'J:'+v.code;return v.type;}
 function parseValue(v){if(v.startsWith('J:'))return {type:'JOURNEE',code:v.slice(2)};return {type:v||''};}
 function dayByCode(code){return JOURNEES.find(x=>x.code===code)||null;}
-function hasVariantForDay(day,col){const number=col+1;return JOURNEES.some(j=>j.code!==day.code&&j.residence===day.residence&&RoulementModel.dayNumber(j.code)===number);}
-function isDayAvailable(day,rowIndex,colIndex){if(!day.allowedDays.includes(colIndex))return false;if(RoulementModel.dayNumber(day.code)===0&&hasVariantForDay(day,colIndex))return false;for(let row=0;row<A.length;row++){if(row===rowIndex)continue;const cell=A[row][colIndex];if(cell&&cell.type==='JOURNEE'&&cell.code===day.code)return false;}return true;}
-function selectOptions(v,rowIndex,colIndex){let s='<option value="">—</option><optgroup label="Journées">';JOURNEES.forEach(j=>{let x='J:'+j.code;const selected=optionValue(v)===x;const disabled=!isDayAvailable(j,rowIndex,colIndex)&&!selected;s+='<option value="'+x+'" '+(selected?'selected ':'')+(disabled?'disabled ':'')+'>'+j.code+'</option>';});s+='</optgroup><optgroup label="Repos et autres">';[['RP','Repos'],['FAC','FAC'],['RM','RM'],['DISPO','DISPO']].forEach(([x,l])=>s+='<option value="'+x+'" '+(v&&v.type===x?'selected':'')+'>'+l+'</option>');s+='</optgroup>';return s;}
-function draw(){refreshJournees();n.value=A.length;let s='<tr><th class=week>Ligne</th>'+D.map((x,i)=>'<th class='+(i>4?'weekend':'')+'>'+x+'</th>').join('')+'</tr>';A.forEach((row,i)=>{s+='<tr><td class=week>'+(i+1)+'</td>';row.forEach((v,j)=>{let cls=(j>4?'weekend ':'')+(v&&v.type==='RP'?'rp ':'')+(v&&v.type==='FAC'?'fac ':'')+(v&&v.type==='RM'?'rm ':'')+(v&&v.type==='DISPO'?'dispo ':'');s+='<td id=c'+i+'_'+j+' class="'+cls+'"><select onchange="setCell('+i+','+j+',this.value)">'+selectOptions(v,i,j)+'</select></td>';});s+='</tr>';});t.innerHTML=s;renderLibrary();calc();}
+function hasVariantForDay(day,col){
+  const number=col+1;
+  const prefix=day.code.slice(0,-1);
+  return JOURNEES.some(j=>j.code!==day.code&&j.code.slice(0,-1)===prefix&&RoulementModel.dayNumber(j.code)===number);
+}
+function isDayAvailable(day,rowIndex,colIndex){
+  if(!day.allowedDays.includes(colIndex))return false;
+  if(RoulementModel.dayNumber(day.code)===0&&hasVariantForDay(day,colIndex))return false;
+  for(let row=0;row<A.length;row++){
+    if(row===rowIndex)continue;
+    const cell=A[row][colIndex];
+    if(cell&&cell.type==='JOURNEE'&&cell.code===day.code)return false;
+  }
+  return true;
+}
+function selectOptions(v,rowIndex,colIndex){
+  let s='<option value="">—</option><optgroup label="Journées">';
+  JOURNEES.forEach(j=>{
+    let x='J:'+j.code;
+    const selected=optionValue(v)===x;
+    const disabled=!isDayAvailable(j,rowIndex,colIndex)&&!selected;
+    s+='<option value="'+x+'" '+(selected?'selected ':'')+(disabled?'disabled ':'')+'>'+j.code+'</option>';
+  });
+  s+='</optgroup><optgroup label="Repos et autres">';
+  [['RP','Repos'],['FAC','FAC'],['RM','RM'],['DISPO','DISPO']].forEach(([x,l])=>s+='<option value="'+x+'" '+(v&&v.type===x?'selected':'')+'>'+l+'</option>');
+  s+='</optgroup>';
+  return s;
+}
+function draw(){
+  refreshJournees();
+  n.value=A.length;
+  let s='<tr><th class=week>Ligne</th>'+D.map((x,i)=>'<th class='+(i>4?'weekend':'')+'>'+x+'</th>').join('')+'</tr>';
+  A.forEach((row,i)=>{
+    s+='<tr><td class=week>'+(i+1)+'</td>';
+    row.forEach((v,j)=>{
+      let cls=(j>4?'weekend ':'')+(v&&v.type==='RP'?'rp ':'')+(v&&v.type==='FAC'?'fac ':'')+(v&&v.type==='RM'?'rm ':'')+(v&&v.type==='DISPO'?'dispo ':'');
+      s+='<td id=c'+i+'_'+j+' class="'+cls+'"><select onchange="setCell('+i+','+j+',this.value)">'+selectOptions(v,i,j)+'</select></td>';
+    });
+    s+='</tr>';
+  });
+  t.innerHTML=s;
+  renderLibrary();
+  calc();
+}
 function setCell(i,j,value){A[i][j]=parseValue(value);draw();}
 function resize(){let x=Math.max(1,+n.value||1);while(A.length<x)A.push(Array(7).fill(null));while(A.length>x)A.pop();draw()}
 function add(){A.push(Array(7).fill(null));draw()}
 function del(){if(A.length>1)A.pop();draw()}
 function empty(){A=A.map(()=>Array(7).fill(null));draw()}
 function demo(){empty();[[3,4],[3,5],[3,6],[4,5],[4,6],[5,6],[6,0],[9,6],[10,0],[10,5],[10,6],[17,5],[17,6],[24,5],[24,6],[25,0]].forEach(x=>{if(A[x[0]])A[x[0]][x[1]]={type:'RP'}});draw()}
-function renderLibrary(){const el=document.getElementById('libraryList');if(!el)return;if(!JOURNEES.length){el.innerHTML='<div class="note">Aucune journée dans la bibliothèque.</div>';return;}let s='<table><tr><th>Code</th><th>Résidence</th><th>Positionnement</th><th>Début</th><th>Fin</th><th>Actions</th></tr>';JOURNEES.forEach(j=>{const pos=j.allowedDays.length===7?'Tous':j.allowedDays.map(x=>D[x]).join(', ');s+='<tr><td><b>'+j.code+'</b></td><td>'+j.residence+'</td><td>'+pos+'</td><td>'+j.start+'</td><td>'+j.end+'</td><td class=actions><button onclick="editDay(\''+j.code+'\')">Modifier</button><button onclick="deleteDay(\''+j.code+'\')">Supprimer</button></td></tr>';});s+='</table>';el.innerHTML=s;}
-function saveDay(){const code=document.getElementById('dayCode').value.trim().toUpperCase();const residence=document.getElementById('dayResidence').value.trim().toUpperCase();const start=document.getElementById('dayStart').value.trim();const end=document.getElementById('dayEnd').value.trim();if(!code){alert('Le code de journée est obligatoire.');return;}try{RoulementModel.add({code,residence,start,end});document.getElementById('dayCode').value='';document.getElementById('dayStart').value='';document.getElementById('dayEnd').value='';draw();}catch(e){alert(e.message);}}
-function editDay(code){const j=dayByCode(code);if(!j)return;const newCode=prompt('Code de la journée',j.code);if(newCode===null)return;const start=prompt('Heure de début (HH:MM)',j.start||'');if(start===null)return;const end=prompt('Heure de fin (HH:MM)',j.end||'');if(end===null)return;try{RoulementModel.update(code,{code:newCode.trim().toUpperCase(),start,end});draw();}catch(e){alert(e.message);}}
-function deleteDay(code){if(!confirm('Supprimer '+code+' de la bibliothèque ?'))return;RoulementModel.remove(code);draw();}
-function resetLibrary(){if(!confirm('Réinitialiser la bibliothèque avec les journées de démonstration ?'))return;RoulementModel.reset();draw();}
+function renderLibrary(){
+  const el=document.getElementById('libraryList');
+  if(!el)return;
+  let s='<h3>Journées</h3>';
+  if(!JOURNEES.length){s+='<div class="note">Aucune journée dans la bibliothèque.</div>';}else{
+    s+='<table><tr><th>Code</th><th>Positionnement</th><th>Début</th><th>Fin</th><th>Actions</th></tr>';
+    JOURNEES.forEach(j=>{
+      const pos=j.allowedDays.length===7?'Tous':j.allowedDays.map(x=>D[x]).join(', ');
+      s+='<tr><td><b>'+j.code+'</b></td><td>'+pos+'</td><td>'+j.start+'</td><td>'+j.end+'</td><td class=actions><button onclick="editDay(\''+j.code+'\')">Modifier</button><button onclick="deleteDay(\''+j.code+'\')">Supprimer</button></td></tr>';
+    });
+    s+='</table>';
+  }
+  s+='<h3 style="margin-top:18px">RHR</h3>';
+  if(!RHRS.length){s+='<div class="note">Aucun RHR enregistré pour le moment.</div>';}else{
+    s+='<table><tr><th>Aller</th><th>Retour</th><th>Lieu</th><th>Actions</th></tr>';
+    RHRS.forEach(rhr=>{
+      s+='<tr><td><b>'+rhr.aller+'</b></td><td><b>'+rhr.retour+'</b></td><td>'+rhr.place+'</td><td class=actions><button onclick="deleteRhr(\''+rhr.id+'\')">Supprimer</button></td></tr>';
+    });
+    s+='</table>';
+  }
+  el.innerHTML=s;
+  refreshRhrSelects();
+}
+function refreshRhrSelects(){
+  const a=document.getElementById('rhrAller');
+  const b=document.getElementById('rhrRetour');
+  if(!a||!b)return;
+  const currentA=a.value,currentB=b.value;
+  const opts=JOURNEES.map(j=>'<option value="'+j.code+'">'+j.code+'</option>').join('');
+  a.innerHTML='<option value="">Aller…</option>'+opts;
+  b.innerHTML='<option value="">Retour…</option>'+opts;
+  if(JOURNEES.some(j=>j.code===currentA))a.value=currentA;
+  if(JOURNEES.some(j=>j.code===currentB))b.value=currentB;
+}
+function saveDay(){
+  const code=document.getElementById('dayCode').value.trim().toUpperCase();
+  const start=document.getElementById('dayStart').value.trim();
+  const end=document.getElementById('dayEnd').value.trim();
+  if(!code){alert('Le code de journée est obligatoire.');return;}
+  try{
+    RoulementModel.add({code,start,end});
+    document.getElementById('dayCode').value='';
+    document.getElementById('dayStart').value='';
+    document.getElementById('dayEnd').value='';
+    draw();
+  }catch(e){alert(e.message);}
+}
+function editDay(code){
+  const j=dayByCode(code);if(!j)return;
+  const newCode=prompt('Code de la journée',j.code);if(newCode===null)return;
+  const start=prompt('Heure de début (HH:MM)',j.start||'');if(start===null)return;
+  const end=prompt('Heure de fin (HH:MM)',j.end||'');if(end===null)return;
+  try{RoulementModel.update(code,{code:newCode.trim().toUpperCase(),start,end});draw();}catch(e){alert(e.message);}
+}
+function deleteDay(code){if(!confirm('Supprimer '+code+' de la bibliothèque ?'))return;try{RoulementModel.remove(code);draw();}catch(e){alert(e.message);}}
+function saveRhr(){
+  const aller=document.getElementById('rhrAller').value;
+  const retour=document.getElementById('rhrRetour').value;
+  const place=document.getElementById('rhrPlace').value.trim().toUpperCase();
+  if(!aller||!retour||!place){alert('Aller, retour et lieu sont obligatoires.');return;}
+  try{RoulementModel.addRhr({aller,retour,place});document.getElementById('rhrPlace').value='';draw();}catch(e){alert(e.message);}
+}
+function deleteRhr(id){if(!confirm('Supprimer ce RHR de la bibliothèque ?'))return;RoulementModel.removeRhr(id);draw();}
+function resetLibrary(){if(!confirm('Réinitialiser la bibliothèque avec les journées de démonstration et supprimer les RHR ?'))return;RoulementModel.reset();draw();}
 function analyse(){let N=Math.max(1,+w.value||52),days=Array.from({length:N*7},(_,i)=>A[Math.floor(i/7)%A.length][i%7]);let total=days.filter(x=>x&&x.type==='RP').length,periods=[],i=0;while(i<days.length){if(!days[i]||days[i].type!=='RP'){i++;continue}let st=i;while(i<days.length&&days[i]&&days[i].type==='RP')i++;periods.push({st,len:i-st})}let doubles=periods.filter(p=>p.len===2),satDim=doubles.filter(p=>p.st%7===5).length,sunMon=doubles.filter(p=>p.st%7===6).length;return{total,periods,doubleTriple:periods.filter(p=>p.len===2||p.len===3).length,tooLong:periods.filter(p=>p.len>3).length,satDim,sunMon,weekendDoubles:satDim+sunMon};}
 function box(label,value,target){let ok=value>=target;return '<div class="card '+(ok?'ok':'warn')+'"><div>'+label+'</div><b>'+value+'</b> / '+target+(ok?' ✓':'')+'</div>'}
 function calc(){let x=analyse();let h=box('Jours de repos annuels',x.total,116)+box('Périodes RP doubles ou triples',x.doubleTriple,52)+box('RP doubles Sam-Dim ou Dim-Lun',x.weekendDoubles,14)+box('RP doubles Sam-Dim',x.satDim,12);if(x.tooLong)h+='<div class="card bad"><div>Périodes RP > 3 jours</div><b>'+x.tooLong+'</b><div>À vérifier.</div></div>';h+='<div class=card><div>Répartition</div><b>Sam-Dim : '+x.satDim+'</b><br>Dim-Lun : '+x.sunMon+'</div>';r.innerHTML=h}
