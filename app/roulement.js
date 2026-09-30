@@ -65,7 +65,7 @@ function renderLibrary(){
   if(!el)return;
   let s='<h3>Journées</h3>';
   if(!JOURNEES.length){s+='<div class="note">Aucune journée dans la bibliothèque.</div>';}else{
-    s+='<table><tr><th>Code</th><th>Positionnement</th><th>Début</th><th>Fin</th><th>Actions</th></tr>';
+    s+='<table><tr><th>Code</th><th>Jour</th><th>Début</th><th>Fin</th><th>Actions</th></tr>';
     JOURNEES.forEach(j=>{
       const pos=j.allowedDays.length===7?'Tous':j.allowedDays.map(x=>D[x]).join(', ');
       s+='<tr><td><b>'+j.code+'</b></td><td>'+pos+'</td><td>'+j.start+'</td><td>'+j.end+'</td><td class=actions><button onclick="editDay(\''+j.code+'\')">Modifier</button><button onclick="deleteDay(\''+j.code+'\')">Supprimer</button></td></tr>';
