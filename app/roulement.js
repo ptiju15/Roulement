@@ -1,8 +1,11 @@
 const D=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const DAY_TYPES=['JOURNEE','RP','FAC','RM','DISPO'];
+const DEFAULT_DAYS=[['K110',[0,1,2,3,4,5,6]],['K111',[0]],['K112',[1]],['K113',[2]],['K114',[3]],['K115',[4]],['K116',[5]],['K117',[6]]];
 let JOURNEES=RoulementModel.list();
+function ensureDefaultDays(){DEFAULT_DAYS.forEach(([code,allowedDays])=>{if(!RoulementModel.get(code))RoulementModel.add({code,residence:'K',allowedDays});});JOURNEES=RoulementModel.list();}
+ensureDefaultDays();
 let A=Array.from({length:28},()=>Array(7).fill(null));
-function refreshJournees(){JOURNEES=RoulementModel.list();}
+function refreshJournees(){ensureDefaultDays();}
 function optionValue(v){if(!v)return '';if(v.type==='JOURNEE')return 'J:'+v.code;return v.type;}
 function parseValue(v){if(v.startsWith('J:'))return {type:'JOURNEE',code:v.slice(2)};return {type:v||''};}
 function dayByCode(code){return JOURNEES.find(x=>x.code===code)||null;}
